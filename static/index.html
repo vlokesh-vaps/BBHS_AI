@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="description" content="BBHS AI Assistant — answers grounded in the active knowledge base." />
+  <title>BBHS AI Assistant</title>
+  <link rel="stylesheet" href="/static/chat.css" />
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>" />
+</head>
+<body>
+
+<!-- Toast Notifications -->
+<div id="toast-container" aria-live="polite" aria-atomic="false"></div>
+
+<div id="app" role="main">
+
+  <!-- ── Header ─────────────────────────────────────────── -->
+  <header id="chat-header" role="banner">
+    <div id="header-logo" aria-hidden="true">🤖</div>
+    <div id="header-info">
+      <div id="header-title">BBHS AI Assistant</div>
+      <div id="session-id-display"
+           title="Your session ID"
+           aria-label="Session ID"
+           role="status">
+        loading…
+      </div>
+    </div>
+    <button
+      id="new-chat-btn"
+      class="btn btn-ghost"
+      aria-label="Start a new conversation"
+      title="New Chat">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"
+           stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
+        <path d="M12 5v14M5 12h14"/>
+      </svg>
+      New Chat
+    </button>
+  </header>
+
+  <!-- ── Message List ───────────────────────────────────── -->
+  <div id="message-list"
+       role="log"
+       aria-label="Conversation"
+       aria-live="polite"
+       aria-relevant="additions">
+
+    <!-- Welcome state injected by JS if empty -->
+    <div id="welcome-state" aria-label="Welcome screen">
+      <div class="welcome-icon" aria-hidden="true">🤖</div>
+      <h2>BBHS AI Assistant</h2>
+      <p>Ask a question and I will answer using information from the active knowledge base.</p>
+      <div class="starter-chips" role="list" aria-label="Suggested starter questions">
+        <button class="starter-chip" role="listitem">How do I create a new issue in VMS?</button>
+        <button class="starter-chip" role="listitem">What is the IssueManager workflow?</button>
+        <button class="starter-chip" role="listitem">How do I assign a ticket to a user?</button>
+        <button class="starter-chip" role="listitem">How do I close or resolve an issue?</button>
+      </div>
+    </div>
+
+  </div>
+
+  <!-- ── Typing Indicator ───────────────────────────────── -->
+  <div id="typing-row" aria-label="Assistant is typing" aria-hidden="true">
+    <div class="msg-avatar bot" aria-hidden="true">🤖</div>
+    <div id="typing-bubble" role="status">
+      <span class="dot"></span>
+      <span class="dot"></span>
+      <span class="dot"></span>
+    </div>
+  </div>
+
+  <!-- ── Input Area ─────────────────────────────────────── -->
+  <div id="input-area">
+    <form id="chat-form" aria-label="Send a message" novalidate>
+      <textarea
+        id="message-input"
+        name="message"
+        rows="1"
+        placeholder="Ask BBHS AI Assistant…"
+        aria-label="Type your question here. Press Enter to send, Shift+Enter for a new line."
+        autocomplete="off"
+        autocorrect="off"
+        spellcheck="true"
+        maxlength="2000"
+      ></textarea>
+      <button
+        id="send-btn"
+        type="submit"
+        aria-label="Send message"
+        title="Send (Enter)">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor"
+             stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <line x1="22" y1="2" x2="11" y2="13"/>
+          <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+        </svg>
+      </button>
+    </form>
+    <div id="input-hint" aria-hidden="true">Enter to send · Shift+Enter for new line</div>
+  </div>
+
+</div><!-- /#app -->
+
+<script src="/static/chat.js"></script>
+</body>
+</html>

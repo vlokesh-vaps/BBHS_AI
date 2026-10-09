@@ -1,0 +1,13 @@
+.git
+.idea
+.venv
+__pycache__/
+*.py[cod]
+.env
+data/
+storage/
+chroma_db/
+chat_cache.json
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/

@@ -1,0 +1,7 @@
+body { background: #f8f9fa; }
+.admin-section { scroll-margin-top: 1rem; }
+.nav-link { color: #343a40; }
+.nav-link.active { background-color: #212529 !important; }
+.health-card .card-body { min-height: 90px; }
+textarea.form-control { min-height: 150px; font-family: ui-monospace, SFMono-Regular, Consolas, monospace; }
+#test-result { white-space: pre-wrap; background: #111827; color: #d1fae5; padding: 1rem; border-radius: .375rem; }

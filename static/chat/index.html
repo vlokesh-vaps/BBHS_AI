@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="description" content="BBHS AI Assistant — Grounded Knowledge Base Assistant">
+  <title>BBHS AI Assistant</title>
+  <link rel="stylesheet" href="/static/chat/chat.css">
+  <link rel="icon" type="image/png" href="/static/logo.png">
+</head>
+<body>
+  <div class="chat-layout">
+    <!-- Slim Top Bar -->
+    <header class="top-bar" role="banner">
+      <div class="brand">
+        <img class="brand-logo" src="/static/logo.png" alt="BBHS Logo" width="28" height="28">
+        <span id="brand-title" class="brand-title">BBHS AI Assistant</span>
+      </div>
+      <button id="new-chat-btn" class="icon-button" aria-label="Start new chat" title="New chat">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" width="20" height="20" aria-hidden="true">
+          <path d="M12 5v14M5 12h14"/>
+        </svg>
+      </button>
+    </header>
+
+    <!-- Chat Messages Scroll Area -->
+    <main class="chat-container" id="chat-container">
+      <div class="chat-content">
+        <!-- Empty State -->
+        <div id="empty-state" class="empty-state">
+          <div class="empty-logo-wrapper">
+            <img class="empty-logo" src="/static/logo.png" alt="BBHS Logo" width="68" height="68">
+          </div>
+          <h1 class="greeting-gradient">Hello</h1>
+          <p class="greeting-sub">Ask me about the policies, procedures, and information in the active knowledge base.</p>
+          <div id="suggestion-chips" class="suggestion-chips"></div>
+        </div>
+
+        <!-- Conversation Stream -->
+        <div id="message-list" class="message-list" role="log" aria-live="polite"></div>
+
+        <!-- Loading Indicator -->
+        <div id="loading-indicator" class="message assistant-message loading-row d-none" aria-hidden="true">
+          <div class="avatar logo-avatar">
+            <img src="/static/logo.png" alt="BBHS" class="avatar-img" width="24" height="24">
+          </div>
+          <div class="shimmer-lines">
+            <div class="shimmer-line line-1"></div>
+            <div class="shimmer-line line-2"></div>
+            <div class="shimmer-line line-3"></div>
+          </div>
+        </div>
+      </div>
+    </main>
+
+    <!-- Input Footer Bar -->
+    <footer class="input-footer" role="contentinfo">
+      <div class="input-column">
+        <form id="chat-form" class="input-box" novalidate>
+          <textarea
+            id="user-input"
+            rows="1"
+            placeholder="Ask anything from the knowledge base..."
+            aria-label="Message BBHS AI Assistant"
+            autocomplete="off"
+            autocorrect="off"
+            spellcheck="true"
+            maxlength="4000"
+          ></textarea>
+          <button id="action-btn" type="submit" class="send-button" aria-label="Send message" title="Send (Enter)" disabled>
+            <!-- Send Icon -->
+            <svg id="send-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" width="18" height="18" aria-hidden="true">
+              <line x1="22" y1="2" x2="11" y2="13"/>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"/>
+            </svg>
+            <!-- Stop Icon (hidden by default) -->
+            <svg id="stop-icon" class="d-none" viewBox="0 0 24 24" fill="currentColor" width="16" height="16" aria-hidden="true">
+              <rect x="6" y="6" width="12" height="12" rx="2"/>
+            </svg>
+          </button>
+        </form>
+        <p id="footer-note" class="footer-note">
+          BBHS AI Assistant answers from its knowledge base and can make mistakes. Conversations are not saved.
+        </p>
+      </div>
+    </footer>
+  </div>
+
+  <script src="/static/chat/chat.js"></script>
+</body>
+</html>

@@ -1,0 +1,84 @@
+services:
+  vapshelp-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    # Use unique image/container names to avoid collisions with other deployments
+    image: vapshelp-api:latest
+    container_name: vapshelp-api-service
+    restart: unless-stopped
+    env_file:
+      - .env
+    environment:
+      OLLAMA_HOST: http://vapshelp-ollama:11434
+      PYTHONUNBUFFERED: "1"
+    ports:
+      - "5008:5008"
+    volumes:
+      - ./data:/app/data:rw
+    depends_on:
+      vapshelp-ollama-model:
+        condition: service_completed_successfully
+      vapshelp-kb:
+        condition: service_completed_successfully
+    healthcheck:
+      test:
+        [
+          "CMD",
+          "python",
+          "-c",
+          "import urllib.request; urllib.request.urlopen('http://127.0.0.1:5008/', timeout=3).read()",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
+      start_period: 45s
+
+  vapshelp-kb:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: vapshelp-kb:latest
+    container_name: vapshelp-kb-builder
+    restart: "no"
+    env_file:
+      - .env
+    environment:
+      OLLAMA_HOST: http://vapshelp-ollama:11434
+      PYTHONUNBUFFERED: "1"
+    volumes:
+      - ./data:/app/data:rw
+    depends_on:
+      vapshelp-ollama-model:
+        condition: service_completed_successfully
+    command: ["python", "-m", "scripts.build_kb"]
+
+  vapshelp-ollama:
+    image: ollama/ollama:latest
+    # Unique container name to avoid conflicts
+    container_name: vapshelp-ollama-service
+    restart: unless-stopped
+    volumes:
+      - vapshelp-ollama-data:/root/.ollama
+    expose:
+      - "11434"
+
+  vapshelp-ollama-model:
+    image: ollama/ollama:latest
+    container_name: vapshelp-ollama-model-service
+    restart: "no"
+    environment:
+      OLLAMA_HOST: http://vapshelp-ollama:11434
+    depends_on:
+      vapshelp-ollama:
+        condition: service_started
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        until ollama list >/dev/null 2>&1; do
+          sleep 2
+        done
+        ollama pull embeddinggemma:latest
+
+volumes:
+  vapshelp-ollama-data:
