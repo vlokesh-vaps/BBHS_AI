@@ -3,85 +3,249 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>AI Control Center</title>
+  <title>BBHS AI Control Center & Knowledge Base Admin</title>
   <link rel="icon" type="image/png" href="/static/logo.png">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
   <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.css" rel="stylesheet">
   <link href="/static/admin.css" rel="stylesheet">
 </head>
 <body>
-  <header class="navbar navbar-dark bg-dark px-3">
+  <header class="navbar navbar-dark bg-dark px-3 sticky-top">
     <span class="navbar-brand d-flex align-items-center gap-2">
       <img src="/static/logo.png" alt="BBHS Logo" width="28" height="28" class="bg-white rounded p-1">
-      AI Control Center
+      BBHS AI Control Center
     </span>
-    <span id="header-status" class="badge text-bg-secondary">Loading</span>
+    <div class="d-flex align-items-center gap-2">
+      <span id="header-status" class="badge text-bg-secondary">Loading</span>
+      <a href="/chat" target="_blank" class="btn btn-sm btn-outline-light"><i class="bi bi-box-arrow-up-right"></i> Open Chatbot</a>
+    </div>
   </header>
+
   <div class="container-fluid">
     <div class="row">
+      <!-- Sidebar Navigation -->
       <aside class="col-lg-2 border-end min-vh-100 p-3 bg-light">
         <nav class="nav nav-pills flex-column gap-1">
-          <a class="nav-link active" href="#dashboard">Dashboard</a>
-          <a class="nav-link" href="#kb">Knowledge Base</a>
-          <a class="nav-link" href="#models">Models</a>
-          <a class="nav-link" href="#prompts">Prompts</a>
-          <a class="nav-link" href="#rag">RAG</a>
-          <a class="nav-link" href="#performance">Performance</a>
-          <a class="nav-link" href="#guardrails">Guardrails</a>
-          <a class="nav-link" href="#system">System</a>
+          <a class="nav-link active" href="#dashboard"><i class="bi bi-speedometer2 me-1"></i> Dashboard</a>
+          <a class="nav-link" href="#kb"><i class="bi bi-journal-text me-1"></i> Knowledge Base</a>
+          <a class="nav-link d-flex justify-content-between align-items-center" href="#approval">
+            <span><i class="bi bi-check2-circle me-1"></i> Approval Queue</span>
+            <span id="approval-badge" class="badge bg-warning text-dark d-none">0</span>
+          </a>
+          <hr class="my-2">
+          <div class="text-muted small px-3 mb-1 text-uppercase fw-bold">Configuration</div>
+          <a class="nav-link" href="#models"><i class="bi bi-cpu me-1"></i> Models</a>
+          <a class="nav-link" href="#prompts"><i class="bi bi-chat-quote me-1"></i> Prompts</a>
+          <a class="nav-link" href="#rag"><i class="bi bi-diagram-3 me-1"></i> RAG Settings</a>
+          <a class="nav-link" href="#performance"><i class="bi bi-lightning-charge me-1"></i> Performance</a>
+          <a class="nav-link" href="#guardrails"><i class="bi bi-shield-check me-1"></i> Guardrails</a>
+          <a class="nav-link" href="#system"><i class="bi bi-terminal me-1"></i> System Test</a>
         </nav>
       </aside>
+
+      <!-- Main Content Area -->
       <main class="col-lg-10 p-4">
         <div id="alert-area"></div>
+
+        <!-- 1. DASHBOARD -->
         <section id="dashboard" class="admin-section">
           <div class="d-flex justify-content-between align-items-center mb-3">
-            <h2>Dashboard</h2>
+            <div>
+              <h2 class="mb-0">System Dashboard</h2>
+              <small class="text-muted">BBHS Pure-RAG Operational Status</small>
+            </div>
             <button class="btn btn-outline-primary" id="refresh-btn"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
           </div>
           <div class="row g-3" id="health-cards"></div>
+
+          <div class="row g-3 mt-2">
+            <div class="col-12">
+              <div class="card">
+                <div class="card-header d-flex justify-content-between align-items-center bg-light">
+                  <span class="fw-bold"><i class="bi bi-journal-bookmark me-1"></i> Knowledge Base Repository & Approval Status</span>
+                  <a href="#kb" class="btn btn-sm btn-outline-primary">Manage Documents</a>
+                </div>
+                <div class="card-body" id="dashboard-kb-summary">
+                  <div class="d-flex justify-content-around text-center py-2">
+                    <div><h3 class="mb-0 text-success" id="dash-published-count">-</h3><small class="text-muted">Published</small></div>
+                    <div><h3 class="mb-0 text-warning" id="dash-review-count">-</h3><small class="text-muted">In Review</small></div>
+                    <div><h3 class="mb-0 text-secondary" id="dash-draft-count">-</h3><small class="text-muted">Drafts</small></div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           <div class="card mt-3">
-            <div class="card-header d-flex justify-content-between align-items-center">
-              <span><i class="bi bi-file-earmark-text"></i> Knowledge Base</span>
-              <a href="#kb" class="btn btn-sm btn-outline-primary" id="dashboard-manage-kb-link">Manage KB</a>
+            <div class="card-header d-flex justify-content-between align-items-center bg-light">
+              <span><i class="bi bi-file-earmark-text"></i> Active Legacy PDF Manifest</span>
+              <span class="badge text-bg-secondary" id="legacy-manifest-status">Legacy status</span>
             </div>
             <div class="card-body" id="dashboard-kb-card">Loading…</div>
           </div>
-          <div class="card mt-4"><div class="card-header">Active configuration</div><div class="card-body" id="active-config">Loading…</div></div>
+          <div class="card mt-4"><div class="card-header bg-light fw-bold">Active Configuration</div><div class="card-body" id="active-config">Loading…</div></div>
         </section>
 
+        <!-- 2. KNOWLEDGE BASE MANAGEMENT -->
         <section id="kb" class="admin-section d-none">
-          <h2>Knowledge Base Management</h2>
-          <div class="row g-3 mt-1">
-            <div class="col-lg-6">
-              <div class="card h-100">
-                <div class="card-header fw-bold">Active Knowledge Base</div>
-                <div class="card-body" id="active-kb-details">
-                  <p class="text-muted">Loading knowledge base details…</p>
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h2 class="mb-0">Knowledge Base Repository</h2>
+              <small class="text-muted">Manage multi-format documents, metadata, categories, and published indexes</small>
+            </div>
+            <div class="d-flex gap-2">
+              <button class="btn btn-outline-secondary" id="sync-indexes-btn" title="Rebuild search indexes for all published documents">
+                <i class="bi bi-arrow-repeat"></i> Sync Indexes
+              </button>
+              <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#ingestionModal">
+                <i class="bi bi-plus-circle me-1"></i> Add Document / Content
+              </button>
+            </div>
+          </div>
+
+          <!-- Filters Bar -->
+          <div class="card mb-3 border-0 shadow-sm bg-white">
+            <div class="card-body py-2">
+              <div class="row g-2 align-items-center">
+                <div class="col-md-3">
+                  <div class="input-group input-group-sm">
+                    <span class="input-group-text"><i class="bi bi-search"></i></span>
+                    <input type="text" id="kb-filter-search" class="form-control" placeholder="Search by title, owner...">
+                  </div>
+                </div>
+                <div class="col-md-2">
+                  <select id="kb-filter-category" class="form-select form-select-sm">
+                    <option value="">All Categories</option>
+                    <option value="Admissions">Admissions</option>
+                    <option value="Academics">Academics</option>
+                    <option value="Fees & Payments">Fees & Payments</option>
+                    <option value="Transport">Transport</option>
+                    <option value="Examinations">Examinations</option>
+                    <option value="Code of Conduct">Code of Conduct</option>
+                    <option value="General">General</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <select id="kb-filter-campus" class="form-select form-select-sm">
+                    <option value="">All Campuses</option>
+                    <option value="Main Campus">Main Campus</option>
+                    <option value="Primary Wing">Primary Wing</option>
+                    <option value="High School">High School</option>
+                  </select>
+                </div>
+                <div class="col-md-2">
+                  <select id="kb-filter-status" class="form-select form-select-sm">
+                    <option value="">All Statuses</option>
+                    <option value="Published">Published (Active)</option>
+                    <option value="Review">In Review</option>
+                    <option value="Approved">Approved</option>
+                    <option value="Draft">Draft</option>
+                    <option value="Disabled">Disabled</option>
+                    <option value="Archived">Archived</option>
+                  </select>
+                </div>
+                <div class="col-md-3 text-end">
+                  <button class="btn btn-sm btn-outline-secondary" id="kb-reset-filters-btn">Reset Filters</button>
                 </div>
               </div>
             </div>
-            <div class="col-lg-6">
-              <div class="card h-100">
-                <div class="card-header fw-bold">Upload & Rebuild</div>
-                <div class="card-body">
-                  <p class="small text-muted mb-2">Upload a single PDF to replace the active knowledge base. This will validate, rebuild the vector index off-line, and swap seamlessly.</p>
-                  <div id="drop-zone" class="border border-2 border-dashed rounded p-4 text-center mb-3" style="cursor: pointer; background: #fafafa; border-style: dashed !important;">
-                    <i class="bi bi-cloud-arrow-up fs-1 text-secondary"></i>
-                    <p class="mb-1 fw-semibold">Click to select or drag & drop a PDF file here</p>
-                    <small class="text-muted d-block" id="selected-file-label">Supported: PDF (up to 25MB, text-based)</small>
-                    <input type="file" id="kb-file-input" accept=".pdf" class="d-none">
+          </div>
+
+          <!-- Documents Table -->
+          <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0" id="documents-table">
+                <thead class="table-light">
+                  <tr>
+                    <th>Document Title</th>
+                    <th>Type</th>
+                    <th>Category</th>
+                    <th>Campus / Year</th>
+                    <th>Version & Owner</th>
+                    <th>Validity Period</th>
+                    <th>Status</th>
+                    <th>Chunks</th>
+                    <th class="text-end">Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="documents-table-body">
+                  <tr><td colspan="9" class="text-center py-4 text-muted">Loading documents…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+
+          <!-- Collapsible Legacy PDF Rebuild -->
+          <div class="accordion mt-4" id="legacyRebuildAccordion">
+            <div class="accordion-item">
+              <h2 class="accordion-header">
+                <button class="accordion-button collapsed py-2 text-muted small" type="button" data-bs-toggle="collapse" data-bs-target="#collapseLegacy">
+                  <i class="bi bi-shield-exclamation me-2"></i> Legacy Single-PDF Rebuild Tool (Emergency Fallback)
+                </button>
+              </h2>
+              <div id="collapseLegacy" class="accordion-collapse collapse" data-bs-parent="#legacyRebuildAccordion">
+                <div class="accordion-body">
+                  <div class="row g-3">
+                    <div class="col-md-6" id="active-kb-details">Loading active PDF...</div>
+                    <div class="col-md-6">
+                      <div id="drop-zone" class="border border-2 border-dashed rounded p-3 text-center mb-2" style="cursor: pointer; background: #fafafa;">
+                        <i class="bi bi-cloud-arrow-up fs-2 text-secondary"></i>
+                        <p class="mb-0 fw-semibold">Click to select emergency PDF</p>
+                        <small class="text-muted d-block" id="selected-file-label">Supported: PDF (up to 25MB)</small>
+                        <input type="file" id="kb-file-input" accept=".pdf" class="d-none">
+                      </div>
+                      <div id="kb-rebuild-alert" class="d-none mb-2"></div>
+                      <button id="upload-rebuild-btn" class="btn btn-sm btn-primary w-100" disabled>
+                        <span class="spinner-border spinner-border-sm d-none" id="upload-spinner" role="status"></span>
+                        <span id="upload-btn-text">Upload and Rebuild Single PDF</span>
+                      </button>
+                    </div>
                   </div>
-                  <div id="kb-rebuild-alert" class="d-none mb-3"></div>
-                  <button id="upload-rebuild-btn" class="btn btn-primary w-100" disabled>
-                    <span class="spinner-border spinner-border-sm d-none" id="upload-spinner" role="status"></span>
-                    <span id="upload-btn-text">Upload and Rebuild</span>
-                  </button>
                 </div>
               </div>
             </div>
           </div>
         </section>
 
+        <!-- 3. APPROVAL QUEUE -->
+        <section id="approval" class="admin-section d-none">
+          <div class="d-flex justify-content-between align-items-center mb-3">
+            <div>
+              <h2 class="mb-0">Content Approval Queue</h2>
+              <small class="text-muted">Review submissions from teachers and department staff before publishing to chatbot</small>
+            </div>
+            <button class="btn btn-outline-primary" id="refresh-approvals-btn"><i class="bi bi-arrow-clockwise"></i> Refresh</button>
+          </div>
+
+          <div class="alert alert-info py-2 d-flex align-items-center">
+            <i class="bi bi-shield-lock fs-5 me-2"></i>
+            <div><strong>Approval Workflow:</strong> Content in <em>Review</em> or <em>Draft</em> is isolated and never queried by the chatbot until explicitly approved and published.</div>
+          </div>
+
+          <div class="card border-0 shadow-sm">
+            <div class="table-responsive">
+              <table class="table table-hover align-middle mb-0">
+                <thead class="table-light">
+                  <tr>
+                    <th>Title & Type</th>
+                    <th>Category</th>
+                    <th>Campus / Year</th>
+                    <th>Submitted By</th>
+                    <th>Version</th>
+                    <th>Updated At</th>
+                    <th class="text-end">Approval Actions</th>
+                  </tr>
+                </thead>
+                <tbody id="approvals-table-body">
+                  <tr><td colspan="7" class="text-center py-4 text-muted">Checking review queue…</td></tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </section>
+
+
+        <!-- 5. CONFIGURATION SECTIONS (PRESERVED) -->
         <section id="models" class="admin-section d-none"><h2>Model Configuration</h2><form data-section="models" class="config-form card card-body mt-3"><div class="row g-3">
           <div class="col-md-6"><label class="form-label">Primary provider</label><select class="form-select" name="primary_provider"></select></div>
           <div class="col-md-6"><label class="form-label">Primary model</label><select class="form-select" name="primary_model"></select></div>
@@ -92,14 +256,294 @@
           <div class="col-md-4"><label class="form-label">Request timeout (seconds)</label><input class="form-control" name="request_timeout" type="number" min="1" max="600"></div>
           <div class="col-12"><div class="form-check form-switch"><input class="form-check-input" name="primary_enabled" type="checkbox"><label class="form-check-label">Primary model enabled</label></div><div class="form-check form-switch"><input class="form-check-input" name="fallback_enabled" type="checkbox"><label class="form-check-label">Fallback enabled</label></div></div>
         </div><button class="btn btn-primary mt-3 save-section">Save models</button></form></section>
+
         <section id="prompts" class="admin-section d-none"><h2>Prompt Configuration</h2><form data-section="prompts" class="config-form card card-body mt-3" id="prompt-form"></form></section>
         <section id="rag" class="admin-section d-none"><h2>RAG Configuration</h2><form data-section="rag" class="config-form card card-body mt-3"><div class="row g-3" id="rag-fields"></div><button class="btn btn-primary mt-3 save-section">Save RAG settings</button></form></section>
         <section id="performance" class="admin-section d-none"><h2>Performance Configuration</h2><form data-section="performance" class="config-form card card-body mt-3"><div class="row g-3" id="performance-fields"></div><button class="btn btn-primary mt-3 save-section">Save performance settings</button></form></section>
         <section id="guardrails" class="admin-section d-none"><h2>Guardrails</h2><form data-section="guardrails" class="config-form card card-body mt-3"><div class="row g-3" id="guardrail-fields"></div><button class="btn btn-primary mt-3 save-section">Save guardrails</button></form></section>
-        <section id="system" class="admin-section d-none"><h2>System</h2><div class="card card-body mt-3"><p>Run a real test without applying edits to production.</p><div class="input-group"><input id="test-question" class="form-control" value="How do I create a ticket in VMS?"><button id="test-btn" class="btn btn-outline-primary">Test configuration</button></div><pre id="test-result" class="mt-3"></pre></div></section>
+        <section id="system" class="admin-section d-none"><h2>System</h2><div class="card card-body mt-3"><p>Run a real test without applying edits to production.</p><div class="input-group"><input id="test-question" class="form-control" value="What is the admission policy for BBHS?"><button id="test-btn" class="btn btn-outline-primary">Test configuration</button></div><pre id="test-result" class="mt-3"></pre></div></section>
       </main>
     </div>
   </div>
+
+  <!-- MODAL: ADD / INGEST CONTENT -->
+  <div class="modal fade" id="ingestionModal" tabindex="-1" aria-labelledby="ingestionModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-lg">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title" id="ingestionModalLabel"><i class="bi bi-file-earmark-plus me-1"></i> Add Knowledge Base Content</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <ul class="nav nav-tabs mb-3" id="ingestionTabs" role="tablist">
+            <li class="nav-item" role="presentation">
+              <button class="nav-link active" id="tab-file-btn" data-bs-toggle="tab" data-bs-target="#tab-file" type="button" role="tab"><i class="bi bi-file-earmark-pdf me-1"></i> Document (PDF / Word)</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-notice-btn" data-bs-toggle="tab" data-bs-target="#tab-notice" type="button" role="tab"><i class="bi bi-megaphone me-1"></i> School Notice / Circular</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-faq-btn" data-bs-toggle="tab" data-bs-target="#tab-faq" type="button" role="tab"><i class="bi bi-patch-question me-1"></i> FAQ Builder</button>
+            </li>
+            <li class="nav-item" role="presentation">
+              <button class="nav-link" id="tab-web-btn" data-bs-toggle="tab" data-bs-target="#tab-web" type="button" role="tab"><i class="bi bi-globe me-1"></i> Approved Website Content</button>
+            </li>
+          </ul>
+
+          <div class="tab-content" id="ingestionTabsContent">
+            <!-- 1. FILE UPLOAD (PDF / DOCX) -->
+            <div class="tab-pane fade show active" id="tab-file" role="tabpanel">
+              <form id="file-upload-form">
+                <div class="mb-3">
+                  <label class="form-label fw-semibold">Select File (PDF or Word .docx) <span class="text-danger">*</span></label>
+                  <input type="file" class="form-control" id="form-file-input" accept=".pdf,.docx" required>
+                  <small class="text-muted">Supported formats: .pdf, .docx (Max 25MB)</small>
+                </div>
+                <div class="row g-2 mb-3">
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Document Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="form-file-title" placeholder="e.g. Admission Policy 2027" required>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Category <span class="text-danger">*</span></label>
+                    <select class="form-select" id="form-file-category" required>
+                      <option value="Admissions">Admissions</option>
+                      <option value="Academics">Academics</option>
+                      <option value="Fees & Payments">Fees & Payments</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Examinations">Examinations</option>
+                      <option value="Code of Conduct">Code of Conduct</option>
+                      <option value="General" selected>General</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">School / Campus</label>
+                    <select class="form-select" id="form-file-campus">
+                      <option value="All Campuses" selected>All Campuses</option>
+                      <option value="Main Campus">Main Campus</option>
+                      <option value="Primary Wing">Primary Wing</option>
+                      <option value="High School">High School</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Academic Year</label>
+                    <input type="text" class="form-control" id="form-file-year" value="2026-2027">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Version</label>
+                    <input type="text" class="form-control" id="form-file-version" value="1.0">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Owner / Submitter</label>
+                    <input type="text" class="form-control" id="form-file-owner" value="Staff Member">
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Language</label>
+                    <input type="text" class="form-control" id="form-file-language" value="English">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Effective Date</label>
+                    <input type="date" class="form-control" id="form-file-effective">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Expiry Date (Optional)</label>
+                    <input type="date" class="form-control" id="form-file-expiry">
+                  </div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="form-file-review" checked>
+                  <label class="form-check-label fw-semibold" for="form-file-review">Submit directly to Administrator Approval Queue</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100" id="file-submit-btn">
+                  <span class="spinner-border spinner-border-sm d-none me-1" id="file-spinner"></span>
+                  Save and Submit Document
+                </button>
+              </form>
+            </div>
+
+            <!-- 2. NOTICE / CIRCULAR -->
+            <div class="tab-pane fade" id="tab-notice" role="tabpanel">
+              <form id="notice-form">
+                <div class="row g-2 mb-3">
+                  <div class="col-md-8">
+                    <label class="form-label fw-semibold">Notice / Circular Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="form-notice-title" placeholder="e.g. Circular: Annual Sports Meet 2026 Schedule" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select class="form-select" id="form-notice-category">
+                      <option value="General" selected>General</option>
+                      <option value="Academics">Academics</option>
+                      <option value="Examinations">Examinations</option>
+                      <option value="Transport">Transport</option>
+                      <option value="Fees & Payments">Fees & Payments</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Campus</label>
+                    <select class="form-select" id="form-notice-campus">
+                      <option value="All Campuses" selected>All Campuses</option>
+                      <option value="Main Campus">Main Campus</option>
+                      <option value="Primary Wing">Primary Wing</option>
+                      <option value="High School">High School</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Academic Year</label>
+                    <input type="text" class="form-control" id="form-notice-year" value="2026-2027">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label fw-semibold">Notice Content (Markdown / Text) <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="form-notice-text" rows="6" placeholder="Enter circular details, instructions, rules, and schedules..." required></textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Effective Date</label>
+                    <input type="date" class="form-control" id="form-notice-effective">
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Expiry Date</label>
+                    <input type="date" class="form-control" id="form-notice-expiry">
+                  </div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="form-notice-review" checked>
+                  <label class="form-check-label fw-semibold" for="form-notice-review">Submit directly to Approval Queue</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Save Notice</button>
+              </form>
+            </div>
+
+            <!-- 3. FAQ BUILDER -->
+            <div class="tab-pane fade" id="tab-faq" role="tabpanel">
+              <form id="faq-form">
+                <div class="row g-2 mb-3">
+                  <div class="col-12">
+                    <label class="form-label fw-semibold">Frequently Asked Question <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="form-faq-question" placeholder="e.g. What is the last date to submit the admission registration form?" required>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label fw-semibold">Official Answer <span class="text-danger">*</span></label>
+                    <textarea class="form-control" id="form-faq-answer" rows="4" placeholder="Provide clear, concise, accurate answer strictly as per school guidelines..." required></textarea>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label fw-semibold">Category</label>
+                    <select class="form-select" id="form-faq-category">
+                      <option value="Admissions" selected>Admissions</option>
+                      <option value="Fees & Payments">Fees & Payments</option>
+                      <option value="Academics">Academics</option>
+                      <option value="Transport">Transport</option>
+                      <option value="General">General</option>
+                    </select>
+                  </div>
+                  <div class="col-md-6">
+                    <label class="form-label">Campus</label>
+                    <select class="form-select" id="form-faq-campus">
+                      <option value="All Campuses" selected>All Campuses</option>
+                      <option value="Main Campus">Main Campus</option>
+                      <option value="Primary Wing">Primary Wing</option>
+                      <option value="High School">High School</option>
+                    </select>
+                  </div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="form-faq-review" checked>
+                  <label class="form-check-label fw-semibold" for="form-faq-review">Submit directly to Approval Queue</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Save FAQ</button>
+              </form>
+            </div>
+
+            <!-- 4. WEB CONTENT -->
+            <div class="tab-pane fade" id="tab-web" role="tabpanel">
+              <form id="web-form">
+                <div class="row g-2 mb-3">
+                  <div class="col-md-8">
+                    <label class="form-label fw-semibold">Content Title <span class="text-danger">*</span></label>
+                    <input type="text" class="form-control" id="form-web-title" placeholder="e.g. Baldwin Boys High School History & Campus Facilities" required>
+                  </div>
+                  <div class="col-md-4">
+                    <label class="form-label">Category</label>
+                    <select class="form-select" id="form-web-category">
+                      <option value="General" selected>General</option>
+                      <option value="Admissions">Admissions</option>
+                      <option value="Academics">Academics</option>
+                    </select>
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label">Source URL (Optional)</label>
+                    <input type="url" class="form-control" id="form-web-url" placeholder="https://baldwinboyshighschool.org/about">
+                  </div>
+                  <div class="col-12">
+                    <label class="form-label fw-semibold">Approved Content Text / Markdown</label>
+                    <textarea class="form-control" id="form-web-text" rows="6" placeholder="Paste clean, verified website text or leave blank if URL is accessible..."></textarea>
+                  </div>
+                </div>
+                <div class="form-check form-switch mb-3">
+                  <input class="form-check-input" type="checkbox" id="form-web-review" checked>
+                  <label class="form-check-label fw-semibold" for="form-web-review">Submit directly to Approval Queue</label>
+                </div>
+                <button type="submit" class="btn btn-primary w-100">Save Website Content</button>
+              </form>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+
+  <!-- MODAL: REJECTION FEEDBACK -->
+  <div class="modal fade" id="rejectionModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title text-danger"><i class="bi bi-x-circle me-1"></i> Request Changes / Reject Document</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="rejection-form">
+            <input type="hidden" id="rejection-doc-id">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Feedback / Reason for Rejection <span class="text-danger">*</span></label>
+              <textarea class="form-control" id="rejection-comment" rows="4" placeholder="Explain what changes the teacher or department staff need to make..." required></textarea>
+            </div>
+            <button type="submit" class="btn btn-danger w-100">Return to Draft with Feedback</button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REPLACE DOCUMENT FILE -->
+  <div class="modal fade" id="replaceModal" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog">
+      <div class="modal-content">
+        <div class="modal-header">
+          <h5 class="modal-title"><i class="bi bi-arrow-repeat me-1"></i> Upload Replacement Version</h5>
+          <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+        </div>
+        <div class="modal-body">
+          <form id="replace-file-form">
+            <input type="hidden" id="replace-doc-id">
+            <div class="mb-3">
+              <label class="form-label fw-semibold">Select New File (.pdf or .docx) <span class="text-danger">*</span></label>
+              <input type="file" class="form-control" id="replace-file-input" accept=".pdf,.docx" required>
+            </div>
+            <div class="mb-3">
+              <label class="form-label fw-semibold">New Version Number <span class="text-danger">*</span></label>
+              <input type="text" class="form-control" id="replace-version-input" value="2.0" required>
+            </div>
+            <button type="submit" class="btn btn-primary w-100" id="replace-submit-btn">
+              <span class="spinner-border spinner-border-sm d-none me-1" id="replace-spinner"></span>
+              Upload & Update Version
+            </button>
+          </form>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
   <script src="/static/admin.js"></script>
 </body>
 </html>

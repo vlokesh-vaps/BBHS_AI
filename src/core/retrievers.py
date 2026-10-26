@@ -163,6 +163,23 @@ def _doc_key(doc: Document) -> tuple[object, str]:
     return doc.metadata.get("page"), doc.page_content[:160]
 
 
+def _is_doc_active(doc: Document) -> bool:
+    """Filter out documents that are unpublished or expired based on chunk metadata."""
+    from datetime import datetime, timezone
+    meta = doc.metadata or {}
+    status = meta.get("status")
+    if status and status != "Published":
+        return False
+    today_str = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    eff = meta.get("effective_date")
+    if eff and eff > today_str:
+        return False
+    exp = meta.get("expiry_date")
+    if exp and exp < today_str:
+        return False
+    return True
+
+
 class EnsembleRetriever(BaseRetriever):
     """
     Hybrid retriever combining Vector and BM25 retrievers via Reciprocal Rank Fusion.
@@ -184,6 +201,7 @@ class EnsembleRetriever(BaseRetriever):
         """Execute hybrid search using Reciprocal Rank Fusion."""
         v_start = time.perf_counter()
         vector_docs = self.vector_retriever.invoke(query)
+        vector_docs = [doc for doc in vector_docs if _is_doc_active(doc)]
         if any("_vector_relevance" in doc.metadata for doc in vector_docs):
             threshold = max(self.similarity_threshold, MIN_VECTOR_RELEVANCE)
             vector_docs = [
@@ -196,6 +214,7 @@ class EnsembleRetriever(BaseRetriever):
 
         b_start = time.perf_counter()
         bm25_docs = self.bm25_retriever.invoke(query)
+        bm25_docs = [doc for doc in bm25_docs if _is_doc_active(doc)]
         b_latency = int((time.perf_counter() - b_start) * 1000)
         log_step("BM25_SEARCH", latency=f"{b_latency}ms", hits=len(bm25_docs))
 

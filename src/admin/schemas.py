@@ -156,3 +156,74 @@ class KBStatusResponse(BaseModel):
 
     active: KBActiveInfo
     rebuild: KBRebuildStatus
+
+
+class DocumentRecord(BaseModel):
+    """Complete document record in the multi-source Knowledge Base repository."""
+
+    id: str
+    title: str
+    content_type: str  # pdf, docx, notice, faq, web_content
+    category: str
+    school_campus: str
+    academic_year: str
+    language: str = "English"
+    owner: str
+    version: str = "1.0"
+    status: str = "Draft"  # Draft, Review, Approved, Published, Disabled, Archived
+    effective_date: str | None = None
+    expiry_date: str | None = None
+    file_name: str | None = None
+    source_url: str | None = None
+    content_text: str | None = None
+    chunks_count: int = 0
+    size_bytes: int = 0
+    rejection_reason: str | None = None
+    created_at: str
+    updated_at: str
+    reviewed_by: str | None = None
+    reviewed_at: str | None = None
+
+
+class DocumentCreateRequest(BaseModel):
+    """Request payload for creating a new document or text-based content."""
+
+    title: str = Field(..., min_length=1, max_length=200)
+    content_type: str = Field(default="pdf", pattern="^(pdf|docx|notice|faq|web_content)$")
+    category: str = Field(default="General", min_length=1, max_length=100)
+    school_campus: str = Field(default="All Campuses", min_length=1, max_length=100)
+    academic_year: str = Field(default="2026-2027", min_length=1, max_length=50)
+    language: str = Field(default="English", min_length=1, max_length=50)
+    owner: str = Field(default="Staff Member", min_length=1, max_length=100)
+    version: str = Field(default="1.0", min_length=1, max_length=20)
+    effective_date: str | None = None
+    expiry_date: str | None = None
+    source_url: str | None = None
+    content_text: str | None = None
+    submit_for_review: bool = False
+
+
+class DocumentUpdateRequest(BaseModel):
+    """Payload for updating document metadata or text content."""
+
+    title: str | None = None
+    category: str | None = None
+    school_campus: str | None = None
+    academic_year: str | None = None
+    language: str | None = None
+    version: str | None = None
+    effective_date: str | None = None
+    expiry_date: str | None = None
+    content_text: str | None = None
+    source_url: str | None = None
+
+
+class WorkflowActionRequest(BaseModel):
+    """Workflow state change request (submit, approve, reject, publish, disable, archive)."""
+
+    action: str = Field(
+        ...,
+        pattern="^(submit_for_review|approve|reject|publish|disable|archive)$",
+    )
+    comment: str | None = None
+    actor: str | None = None

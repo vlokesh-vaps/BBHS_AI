@@ -7,14 +7,12 @@
  *   data-title         Window title  (default: "BBHS AI Assistant")
  *   data-primary-color Accent colour (default: "#6C5CE7")
  *   data-welcome       Welcome msg   (default: "Hi! I am BBHS AI Assistant. How can I help?")
- *   data-booking-url   Booking link  (default: "")
  *
  * Example:
  *   <script src="/static/widget.js"
  *           data-title="BBHS AI Assistant"
  *           data-primary-color="#6C5CE7"
  *           data-welcome="Hi! Ask me anything."
- *           data-booking-url="https://vapstech.com/contact"
  *           defer></script>
  */
 
@@ -35,12 +33,10 @@
     title:       attr('title',       'BBHS AI Assistant'),
     primary:     attr('primaryColor','#6C5CE7'),
     welcome:     attr('welcome',     'Hi! I am BBHS AI Assistant. How can I help?'),
-    bookingUrl:  attr('bookingUrl',  ''),
   };
 
   const API_ENDPOINT = CFG.apiUrl.replace(/\/$/, '') + '/webhook/chat';
   const TIMEOUT_MS   = 30_000;
-  const SESSION_KEY  = 'vaps_widget_session';
 
   /* ── State ─────────────────────────────────────────────── */
   let sessionId  = getOrCreateSession();
@@ -368,7 +364,6 @@
       const data = await res.json();
       if (data.session_id) {
         sessionId = data.session_id;
-        sessionStorage.setItem(SESSION_KEY, sessionId);
       }
 
       showTyping(false);
@@ -378,9 +373,6 @@
         addSuggestions(data.suggested_questions);
       }
 
-      if (data.booking_url || CFG.bookingUrl) {
-        addBooking(data.booking_url || CFG.bookingUrl, row);
-      }
 
     } catch (err) {
       showTyping(false);
@@ -490,9 +482,6 @@
     function vote(rating) {
       // Store {timestamp, session_id, message_id, rating} — no PII
       try {
-        const store = JSON.parse(localStorage.getItem('vaps_feedback') || '{}');
-        store[msgId] = { rating, session_id: sessionId, ts: Date.now() };
-        localStorage.setItem('vaps_feedback', JSON.stringify(store));
       } catch (_) {}
       wrap.innerHTML = '<span style="font-size:11px;color:#00CE97;">Thanks!</span>';
     }
@@ -535,14 +524,11 @@
   }
 
   function getOrCreateSession() {
-    let id = sessionStorage.getItem(SESSION_KEY);
-    if (!id) { id = crypto.randomUUID(); sessionStorage.setItem(SESSION_KEY, id); }
-    return id;
+    return crypto.randomUUID();
   }
 
   /* ── Bounce FAB on first load ───────────────────────────── */
-  if (!sessionStorage.getItem('vaps_w_seen')) {
-    sessionStorage.setItem('vaps_w_seen', '1');
+  {
     setTimeout(() => {
       $fab.style.transform = 'scale(1.15)';
       setTimeout(() => { $fab.style.transform = ''; }, 300);

@@ -28,8 +28,21 @@ ADMIN_COOKIE_SECURE = os.getenv("ADMIN_COOKIE_SECURE", "false").lower() == "true
 KB_DIR = BASE_DIR / "data/kb"
 KB_STAGING_DIR = BASE_DIR / "data/kb_staging"
 KB_MANIFEST_FILE = BASE_DIR / "data/kb_manifest.json"
+KB_CATALOG_FILE = BASE_DIR / "data/kb_catalog.json"
 KB_MAX_UPLOAD_MB = int(os.getenv("KB_MAX_UPLOAD_MB", "25"))
 KB_MAX_PAGES = int(os.getenv("KB_MAX_PAGES", "500"))
+KB_SUPPORTED_FORMATS = ("pdf", "docx", "notice", "faq", "web_content")
+KB_STATUSES = ("Draft", "Review", "Approved", "Published", "Disabled", "Archived")
+KB_CATEGORIES = (
+    "Admissions",
+    "Academics",
+    "Fees & Payments",
+    "Transport",
+    "Examinations",
+    "Code of Conduct",
+    "General",
+)
+KB_CAMPUSES = ("All Campuses", "Main Campus", "Primary Wing", "High School")
 
 # ============================================================================
 # Model and Embedding Configuration

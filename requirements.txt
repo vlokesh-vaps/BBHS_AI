@@ -13,3 +13,4 @@ tzdata>=2024.1
 requests>=2.31.0
 langchain-groq
 python-multipart>=0.0.9
+python-docx>=1.1.0

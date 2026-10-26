@@ -222,6 +222,7 @@ def _get_resources():
 
 
 @app.get("/")
+@app.get("/health")
 def health() -> dict[str, str]:
     """Health check endpoint."""
     return {"status": "ok"}
