@@ -1,5 +1,6 @@
 """FastAPI routes for knowledge base management in the AI Control Center."""
 
+import asyncio
 import gc
 import hashlib
 import time
@@ -298,7 +299,7 @@ def update_kb_document(
 
 
 @router.post("/documents/{doc_id}/action", response_model=DocumentRecord)
-def workflow_action(
+async def workflow_action(
     doc_id: str,
     payload: WorkflowActionRequest,
     request: Request,
@@ -317,7 +318,7 @@ def workflow_action(
         raise HTTPException(status_code=404, detail="Document not found")
 
     # Automatically re-index or de-index when entering/exiting Published state
-    sync_document_index(record, app_instance=request.app)
+    await asyncio.to_thread(sync_document_index, record, request.app)
 
     log_step("KB_WORKFLOW_ACTION", doc_id=doc_id, action=payload.action, new_status=record.status)
     return record
@@ -374,7 +375,7 @@ async def replace_document_file(
         raise HTTPException(status_code=500, detail="Failed to update document version")
 
     if updated_record.status == "Published":
-        sync_document_index(updated_record, app_instance=request.app)
+        await asyncio.to_thread(sync_document_index, updated_record, request.app)
 
     log_step("KB_DOC_REPLACED", doc_id=doc_id, version=new_version)
     return updated_record

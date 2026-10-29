@@ -25,6 +25,8 @@ from src.core.prompts import (
     build_active_direct_prompt,
     build_active_qa_prompt,
     classify_query,
+    is_grade_fee_enquiry,
+    missing_information_response,
     to_langchain_messages,
 )
 from src.core.retrievers import (
@@ -64,6 +66,7 @@ def _retrieval_query(question: str, chat_history: list[dict[str, str]]) -> str:
     The answer history is intentionally excluded from the search query. This
     prevents a previous model response from becoming a false source of truth.
     """
+    query = question
     normalized = question.strip().lower()
     words = set(normalized.split())
     follow_up_markers = {"it", "that", "this", "they", "them", "there", "also"}
@@ -77,8 +80,30 @@ def _retrieval_query(question: str, chat_history: list[dict[str, str]]) -> str:
             "",
         )
         if previous_user and previous_user.strip() != question.strip():
-            return f"{previous_user}\nFollow-up question: {question}"
-    return question
+            query = f"{previous_user}\nFollow-up question: {question}"
+    corrections = {
+        "admisson": "admission",
+        "admision": "admission",
+        "admisison": "admission",
+        "timmings": "timings",
+        "visitting": "visiting",
+        "scholl": "school",
+        "clas": "class",
+    }
+    for misspelling, correction in corrections.items():
+        query = query.replace(misspelling, correction)
+
+    normalized = query.lower()
+    related_terms: list[str] = []
+    if any(term in normalized for term in ("fee", "fees", "tuition", "cost", "price")):
+        related_terms.append("fee structure tuition charges admission fee")
+    if any(term in normalized for term in ("visit", "tour", "campus", "come to school")):
+        related_terms.append("campus visit visiting hours admission enquiry")
+    if any(term in normalized for term in ("admission", "enrol", "enroll", "apply")):
+        related_terms.append("admission application online portal class")
+    if any(term in normalized for term in ("time", "timing", "hours", "start")):
+        related_terms.append("school timings grades section")
+    return f"{query}\nRelated school terms: {'; '.join(related_terms)}" if related_terms else query
 
 
 def format_context_docs(docs: list[Document]) -> str:
@@ -222,6 +247,14 @@ def answer_question(
         log_step("LLM_RESPONSE", latency="0ms", source="tool")
         return answer
 
+    # Grade-specific fee questions use the approved deterministic response.
+    # This must run before cache/retrieval so stale answers cannot expose a
+    # partial amount, wrong grade, or an unapproved contact number.
+    if is_grade_fee_enquiry(question):
+        answer = missing_information_response(question)
+        log_step("GRADE_FEE_FALLBACK", query_len=len(question))
+        return answer
+
     # 1. Check cache first
     cache_enabled = True
     try:
@@ -271,15 +304,7 @@ def answer_question(
 
     if not docs:
         log_step("SEARCH_EMPTY", route=route)
-        return (
-            active_guardrail_text(
-                active_response_text(
-                    "no_answer_prompt",
-                    "I don't have information about that in the knowledge base. "
-                    "Please provide more details or rephrase your question.",
-                )
-            )
-        )
+        return missing_information_response(question)
 
     # 4. Generate answer using LCEL RAG chain
     rag_chain = build_rag_chain(llm)
@@ -296,10 +321,7 @@ def answer_question(
     # Guard: Never return an empty string to the user
     if not answer:
         log_step("LLM_EMPTY_RESPONSE", route=route)
-        answer = (
-            "I'm sorry, I was unable to generate a response. "
-            "Please try rephrasing your question or provide more details."
-        )
+        answer = missing_information_response(question)
 
     if _is_low_confidence_cached_answer(answer):
         log_step("CACHE_SKIP", route=route, reason="low_confidence_answer")

@@ -18,6 +18,7 @@ load_dotenv()
 
 from src.admin.config_service import default_config, load_config
 from src.admin.kb_service import startup_recovery
+from src.agents import AgentOrchestrator, SessionState
 from src.api.admin import require_admin_access, router as admin_router
 from src.api.kb_routes import router as kb_router
 from src.api.schemas import ChatRequest, ChatResponse
@@ -27,6 +28,7 @@ from src.config import (
     API_TITLE,
     ASSISTANT_NAME,
     CHAT_MODEL,
+    ENABLE_CONVERSATIONAL_AGENT,
     LLM_MAX_TOKENS,
     LLM_TEMPERATURE,
     MAX_HISTORY_MESSAGES,
@@ -51,13 +53,16 @@ class BoundedSessionStore:
     ) -> None:
         self.max_entries = max_entries
         self.ttl_seconds = ttl_seconds
-        # session_id -> (history_list, last_active_timestamp)
-        self._store: OrderedDict[str, tuple[list[dict[str, str]], float]] = OrderedDict()
+        # session_id -> (history_list, session_state, last_active_timestamp)
+        self._store: OrderedDict[str, tuple[list[dict[str, str]], SessionState, float]] = OrderedDict()
         self._lock = threading.Lock()
 
     def _purge_expired(self, now: float) -> None:
         """Evict sessions that have exceeded the idle TTL under lock."""
-        expired = [sid for sid, (_, last_active) in self._store.items() if now - last_active > self.ttl_seconds]
+        expired = [
+            sid for sid, val in self._store.items()
+            if now - (val[2] if len(val) >= 3 else val[1]) > self.ttl_seconds
+        ]
         for sid in expired:
             del self._store[sid]
 
@@ -67,29 +72,59 @@ class BoundedSessionStore:
         with self._lock:
             self._purge_expired(now)
             if session_id in self._store:
-                history, _ = self._store[session_id]
-                self._store[session_id] = (history, now)
+                val = self._store[session_id]
+                history = val[0]
+                state = val[1] if len(val) >= 3 else SessionState()
+                self._store[session_id] = (history, state, now)
                 self._store.move_to_end(session_id)
                 return list(history)
             return []
 
-    def append_messages(self, session_id: str, user_message: str, ai_response: str) -> None:
+    def get_session(self, session_id: str) -> tuple[list[dict[str, str]], SessionState]:
+        """Retrieve conversation history and session state if not expired."""
+        now = time.time()
+        with self._lock:
+            self._purge_expired(now)
+            if session_id in self._store:
+                val = self._store[session_id]
+                history = val[0]
+                state = val[1] if len(val) >= 3 else SessionState()
+                self._store[session_id] = (history, state, now)
+                self._store.move_to_end(session_id)
+                return list(history), state
+            return [], SessionState()
+
+    def append_messages(
+        self,
+        session_id: str,
+        user_message: str,
+        ai_response: str,
+        state: SessionState | None = None,
+    ) -> None:
         """Append messages to session history with TTL and capacity bounds."""
         now = time.time()
         with self._lock:
             self._purge_expired(now)
-            history = list(self._store[session_id][0]) if session_id in self._store else []
+            if session_id in self._store:
+                val = self._store[session_id]
+                history = list(val[0])
+                current_state = state or (val[1] if len(val) >= 3 else SessionState())
+            else:
+                history = []
+                current_state = state or SessionState()
+
             history.append({"role": "user", "content": user_message})
             history.append({"role": "assistant", "content": ai_response})
             if len(history) > MAX_HISTORY_MESSAGES:
                 history = history[-MAX_HISTORY_MESSAGES:]
-            self._store[session_id] = (history, now)
+            self._store[session_id] = (history, current_state, now)
             self._store.move_to_end(session_id)
             while len(self._store) > self.max_entries:
                 self._store.popitem(last=False)
 
 
 session_store = BoundedSessionStore()
+agent_orchestrator = AgentOrchestrator()
 
 
 def _runtime_config():
@@ -153,7 +188,7 @@ app.include_router(kb_router)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins="*",
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -270,9 +305,47 @@ def webhook_chat(payload: ChatRequest, background_tasks: BackgroundTasks) -> Cha
         raise HTTPException(status_code=400, detail="message is required")
 
     vector_db, bm25_index, llm, cache, ensemble_retriever = _get_resources()
-    chat_history = session_store.get_history(session_id)
+    chat_history, session_state = session_store.get_session(session_id)
 
-    # Graceful handling when knowledge base has not been indexed yet
+    if ENABLE_CONVERSATIONAL_AGENT:
+        try:
+            total_start = time.perf_counter()
+            log_step("QUERY_START", query_len=len(message), session_id=session_id)
+
+            agent_response = agent_orchestrator.process_turn(
+                question=message,
+                chat_history=chat_history,
+                session_state=session_state,
+                vector_db=vector_db,
+                bm25_index=bm25_index,
+                llm=llm,
+                cache=cache,
+                ensemble_retriever=ensemble_retriever,
+                answer_question_fn=answer_question,
+            )
+            answer = agent_response.answer
+            actions = agent_response.actions
+            session_store.append_messages(
+                session_id,
+                message,
+                answer,
+                state=agent_response.state or session_state,
+            )
+
+            log_step("BOT_MESSAGE", answer_len=len(answer), session_id=session_id)
+            total_latency_ms = int((time.perf_counter() - total_start) * 1000)
+            log_step("TOTAL", latency=f"{total_latency_ms}ms", session_id=session_id)
+            return ChatResponse(session_id=session_id, answer=answer, actions=actions)
+        except HTTPException:
+            raise
+        except Exception as exc:
+            log_error("API_ERROR", exc, session_id=session_id, query_len=len(message))
+            raise HTTPException(
+                status_code=500,
+                detail="An unexpected error occurred while processing your request.",
+            ) from exc
+
+    # Graceful handling when knowledge base has not been indexed yet (legacy fallback)
     if vector_db is None or ensemble_retriever is None:
         from src.core.prompts import classify_query
         from src.core.tools import call_time_tool
@@ -282,11 +355,11 @@ def webhook_chat(payload: ChatRequest, background_tasks: BackgroundTasks) -> Cha
         if route == "small_talk":
             return ChatResponse(
                 session_id=session_id,
-                answer=f"Hello! I am {ASSISTANT_NAME}. The knowledge base is currently being set up. How can I assist you?",
+                answer=f"Hello! Welcome to Baldwin Boys' High School. How can I help you today? I can help with admissions, school timings, facilities, or school life.",
             )
         return ChatResponse(
             session_id=session_id,
-            answer=f"The knowledge base is currently empty or initializing. Please upload a knowledge base document in the Control Center.",
+            answer="I'd love to help with that. Could you tell me a little more? I can help with admissions, fees, school timings, facilities, and school life.",
         )
 
     try:
@@ -320,7 +393,7 @@ def webhook_chat(payload: ChatRequest, background_tasks: BackgroundTasks) -> Cha
         ) from exc
 
 
-def run(host: str = API_HOST, port: int = API_PORT, reload: bool = True) -> None:
+def run(host: str = API_HOST, port: int = API_PORT, reload: bool = False) -> None:
     """Run the FastAPI server with a single worker per D5."""
     import uvicorn
     uvicorn.run("src.api.app:app", host=host, port=port, reload=reload)

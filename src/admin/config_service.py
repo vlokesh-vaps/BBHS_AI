@@ -10,19 +10,9 @@ from typing import Any
 from pydantic import ValidationError
 
 from src.admin.schemas import AdminConfig, AdminConfigUpdate
-from src.config import (
-    ADMIN_CONFIG_FILE,
-    ASSISTANT_NAME,
-    BM25_TOP_K,
-    CHAT_MODEL,
-    FINAL_TOP_K,
-    LLM_MAX_TOKENS,
-    LLM_TEMPERATURE,
-    MAX_HISTORY_CHARS,
-    MAX_HISTORY_MESSAGES,
-    PDF_CHUNK_OVERLAP,
-    PDF_CHUNK_SIZE,
-    SEMANTIC_CACHE_THRESHOLD,
+from src.config import (    ADMIN_CONFIG_FILE,    ASSISTANT_NAME,    BM25_TOP_K,
+    CHAT_MODEL,    FINAL_TOP_K,    LLM_MAX_TOKENS,    LLM_TEMPERATURE,    MAX_HISTORY_CHARS,
+    MAX_HISTORY_MESSAGES,    PDF_CHUNK_OVERLAP,    PDF_CHUNK_SIZE,    SEMANTIC_CACHE_THRESHOLD,
     VECTOR_TOP_K,
 )
 
@@ -37,7 +27,7 @@ def _default_prompt_values() -> dict[str, str]:
     return {
         "system_prompt": SYSTEM_RAG_INSTRUCTIONS,
         "rag_prompt": "Context:\n{context}\n\nQuestion:\n{question}\n\nAnswer:",
-        "no_answer_prompt": f"I don't have information about that in the knowledge base. Please provide more details or rephrase your question.",
+        "no_answer_prompt": "I'd love to help with that. Could you tell me a little more? For example, are you asking about admissions, fees, school timings, facilities, or school life?",
         "greeting_prompt": f"Hello! How can I assist you today? I am {ASSISTANT_NAME}.",
         "context_instructions": SYSTEM_DIRECT_INSTRUCTIONS,
     }

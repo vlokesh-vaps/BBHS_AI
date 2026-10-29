@@ -7,7 +7,7 @@ This is the **BBHS AI Assistant**, a **pure Retrieval Augmented Generation (RAG)
 ## Key Capabilities & Core Mission
 
 - ✅ **Gemini-style Chat UI (`/chat`)**: Clean, responsive, full-height chat interface with zero external CDN dependencies, system fonts, dark/light theme support, copy buttons, stop generation, and client-side XSS sanitization.
-- ✅ **Dynamic Knowledge Base Upload (`/admin`)**: Upload a single PDF in the AI Control Center to validate, stage, rebuild embeddings and BM25 index, and hot-swap into production without downtime or restart.
+- ✅ **Knowledge Base Ingestion**: Build the vector database from all PDF and DOCX files in `KB_PDF/`, or upload managed PDF/DOCX documents through the AI Control Center.
 - ✅ **Strictly No Chat Storage (D3)**: Conversations are never stored on disk, databases, or client-side storage (`localStorage`/`sessionStorage`/cookies). Logs strictly record request metadata and latency, never user message or answer text. Cache is in-memory only.
 - ✅ **Pure RAG**: No lead capture, no sales funnels, no accounts.
 - ✅ **Hybrid Retrieval**: Combines vector similarity (Chroma) + BM25 keyword retrieval using Reciprocal Rank Fusion (RRF).
@@ -85,7 +85,7 @@ AIChat_BBHS/
 | ID | Decision | Description |
 |---|---|---|
 | **D1** | **Display Name** | The assistant is named **"BBHS AI Assistant"**, configured centrally via `ASSISTANT_NAME` in `src/config.py`. |
-| **D2** | **One Active KB PDF** | One active PDF is active at any time, recorded in `data/kb_manifest.json`. A new upload in `/admin` stages, validates, rebuilds, and atomically replaces it without application restart. |
+| **D2** | **Controlled Knowledge Base** | A rebuild indexes all PDF/DOCX files supplied in `KB_PDF/`; managed admin documents are validated, staged, indexed, and published through the approval workflow. |
 | **D3** | **No Chat Storage** | Messages are never stored to external datastores, disk files, or browser storage (`localStorage`, `sessionStorage`, `IndexedDB`, cookies). Cache is in-memory only. Logs never record user query or answer text. |
 | **D4** | **Public `/chat` UI** | Public end-user interface inspired by Gemini's layout, loading zero external resources (no external CDNs or Google Fonts). |
 | **D5** | **Single Worker** | Single Uvicorn worker process assumed (`--workers 1`) to preserve in-memory session history, cache, and rebuild locking. |
@@ -131,11 +131,13 @@ AIChat_BBHS/
 # Run the API server
 python app.py
 # Or with Uvicorn directly
-uvicorn src.api.app:app --host 0.0.0.0 --port 5008 --workers 1 --reload
+uvicorn src.api.app:app --host 0.0.0.0 --port 5008 --workers 1
 ```
 Visit:
 - Chat Interface: `http://localhost:5008/chat`
 - Control Center: `http://localhost:5008/admin`
+
+For a full knowledge-base rebuild, place `.pdf` and `.docx` files in `KB_PDF/` and run `python -m scripts.build_kb`. Configure production browser origins with the comma-separated `CORS_ALLOWED_ORIGINS` environment variable.
 
 ### 2. Running Tests
 ```powershell

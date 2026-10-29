@@ -12,7 +12,7 @@ Welcome to the **BBHS AI Assistant** repository. This document serves as the pri
 
 1. **Pure RAG Focus**: Dedicated exclusively to accurate, grounded question-answering. Do **NOT** add lead collection forms, contact collection funnels, sales qualification gates, or marketing prompts.
 2. **Strict Grounding**: The LLM must answer questions using retrieved context from the active knowledge base. If context is missing or irrelevant, it must gracefully inform the user rather than hallucinating.
-3. **One Active KB PDF (D2)**: There is exactly one active knowledge base PDF at any time, tracked in `data/kb_manifest.json`. Administrators can upload a new PDF in the AI Control Center (`/admin`), which validates, stages, rebuilds the vector store and BM25 index, and hot-swaps without downtime.
+3. **Controlled Knowledge Base (D2)**: A full rebuild indexes all `.pdf` and `.docx` files in `KB_PDF/`. Managed documents uploaded through `/admin` are validated, staged, approval-controlled, indexed, and published without exposing unpublished content to retrieval.
 4. **Strictly No Chat Storage (D3)**: Conversations are never persisted to disk, databases, external datastores, or client storage (`localStorage`/`sessionStorage`/cookies). Cache is in-memory only. Logs strictly record length and metadata, never question or answer text.
 5. **Centralized Configuration**: Default thresholds, model identifiers, paths, and limits reside in `src/config.py`; administrator-editable runtime values are validated and atomically persisted by `src/admin/config_service.py`. Saved prompts in `data/admin_config.json` take precedence over code defaults.
 6. **Single Uvicorn Worker (D5)**: The application is designed to run with `--workers 1` to ensure in-memory sessions, cache, and rebuild synchronization remain coherent.
@@ -54,7 +54,7 @@ AIChat_BBHS/
 │       └── logging.py                  # Structured console and file logger (sanitized per D3)
 ├── scripts/                            # Operational & CLI scripts
 │   ├── __init__.py
-│   ├── build_kb.py                     # Parameterized PDF ingestion and Chroma builder
+│   ├── build_kb.py                     # PDF/DOCX ingestion and Chroma builder
 │   └── cli_chat.py                     # Interactive terminal chat interface
 ├── static/                             # Static web assets
 │   ├── admin.html / .css / .js         # AI Control Center SPA
@@ -93,6 +93,7 @@ AIChat_BBHS/
 | **Vector Store** | ChromaDB (`langchain-chroma`) | Persisted in `data/chroma_db/` |
 | **Keyword Search** | Custom BM25 | Reciprocal Rank Fusion with Vector search |
 | **Document Processing** | PyMuPDF (`fitz`), `pymupdf4llm` | Structure-preserving Markdown chunking |
+| **Word Processing** | `python-docx` | Headings, paragraphs, lists, and tables from `.docx` sources |
 | **Control Center** | Bootstrap 5 + Vanilla JS | Signed session cookies (`ADMIN_SESSION_TTL_SECONDS = 300`) |
 | **Chat Frontend** | Vanilla HTML/CSS/JS | Gemini layout, in-memory transcript, zero external CDNs |
 
@@ -145,3 +146,13 @@ Response:
 2. **Rule 2: Simplicity First**: Minimum code footprint that meets the requirements. No unneeded abstraction layers.
 3. **Rule 3: Surgical Changes**: Touch only necessary files, follow established conventions, preserve existing docstrings.
 4. **Rule 4: Goal-Driven Execution**: Run verification commands and include concrete outputs.
+
+## 6. Current Production Requirements
+
+- Run exactly one Uvicorn worker in production; do not use `--reload`.
+- Set `GROQ_API_KEY`, `ADMIN_USERNAME`, `ADMIN_PASSWORD`, and `ADMIN_COOKIE_SECURE=true` in the deployment environment.
+- Set `CORS_ALLOWED_ORIGINS` to the exact trusted frontend origins as a comma-separated list. Do not use `*` with credentialed admin sessions.
+- Keep chat transcripts in memory only. Do not add browser storage, transcript persistence, question/answer logging, or feedback payloads containing chat text.
+- Rebuild the knowledge base with `python -m scripts.build_kb` after placing `.pdf` or `.docx` files in `KB_PDF/`. The build replaces the Chroma directory and refreshes BM25 on the next application startup.
+- Validate the deployment with `python -m pytest -q` and `python -m compileall -q src scripts tests` before release.
+- Treat `data/` as runtime state. Back up approved knowledge-base sources and configuration separately; never commit secrets or runtime caches.

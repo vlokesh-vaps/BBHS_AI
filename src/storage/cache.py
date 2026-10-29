@@ -1,4 +1,4 @@
-"""Exact and semantic response cache (in-memory only per D3)."""
+"""Exact and semantic response cache (in-memory only per Invariant D3)."""
 
 import math
 import time
@@ -14,31 +14,41 @@ from src.config import (
     SEMANTIC_CACHE_THRESHOLD,
     normalize_question,
 )
+from src.providers.embeddings import check_embedding_reachability
 from src.utils.logging import log_error, log_step
-
 
 _semantic_embedder: OllamaEmbeddings | None = None
 
 
-def get_semantic_embedder() -> OllamaEmbeddings:
-    """Get or create the semantic embedder singleton."""
+def get_semantic_embedder() -> OllamaEmbeddings | None:
+    """Get or create the semantic embedder singleton if the service is reachable."""
     global _semantic_embedder
     if _semantic_embedder is None:
+        reachable, _ = check_embedding_reachability(OLLAMA_BASE_URL, timeout_seconds=1.0)
+        if not reachable:
+            return None
         _semantic_embedder = OllamaEmbeddings(model=EMBEDDING_MODEL, base_url=OLLAMA_BASE_URL)
     return _semantic_embedder
 
 
 def make_cache_key(question: str) -> str:
     """
-    Generate a cache key for a question.
-
-    If the question is short enough, use it directly.
-    Otherwise, use SHA256 hash of the normalized question.
+    Generate a multi-factor cache key for a question.
+    Incorporates normalized text, prompt version, and active model.
     """
     normalized_question = normalize_question(question)
-    if len(normalized_question) <= 160:
-        return normalized_question
-    digest = sha256(normalized_question.encode("utf-8")).hexdigest()[:16]
+    try:
+        from src.admin.config_service import load_config
+        cfg = load_config()
+        p_ver = cfg.prompts.version
+        m_id = cfg.models.primary_model
+    except Exception:
+        p_ver, m_id = 1, ""
+
+    key_raw = f"{normalized_question}::v{p_ver}::{m_id}"
+    if len(key_raw) <= 160:
+        return key_raw
+    digest = sha256(key_raw.encode("utf-8")).hexdigest()[:20]
     return f"sha256:{digest}"
 
 
@@ -46,7 +56,7 @@ def load_cache() -> dict[str, dict[str, object]]:
     """
     Load the cache in-memory.
 
-    Per D3 (no chat storage), disk persistence is disabled.
+    Per Invariant D3 (no chat storage), disk persistence is disabled.
     Always returns a new in-memory dictionary.
     """
     return {}
@@ -105,9 +115,13 @@ def get_cached_answer(
             return answer
 
     # Try semantic match
+    embedder = get_semantic_embedder()
+    if embedder is None:
+        return None
+
     normalized_question = normalize_question(question)
     try:
-        query_embedding = get_semantic_embedder().embed_query(normalized_question)
+        query_embedding = embedder.embed_query(normalized_question)
     except Exception as exc:
         log_error("SEMANTIC_CACHE_EMBED_FAILED", exc, query_len=len(normalized_question))
         return None
@@ -160,10 +174,12 @@ def update_cache(
     """
     normalized_question = normalize_question(question)
     question_embedding: list[float] | None = None
-    try:
-        question_embedding = get_semantic_embedder().embed_query(normalized_question)
-    except Exception as exc:
-        log_error("SEMANTIC_CACHE_WRITE_EMBED_FAILED", exc, query_len=len(normalized_question))
+    embedder = get_semantic_embedder()
+    if embedder is not None:
+        try:
+            question_embedding = embedder.embed_query(normalized_question)
+        except Exception as exc:
+            log_error("SEMANTIC_CACHE_WRITE_EMBED_FAILED", exc, query_len=len(normalized_question))
 
     cache[make_cache_key(question)] = {
         "answer": answer,

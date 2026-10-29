@@ -20,6 +20,14 @@ ADMIN_USERNAME = os.getenv("ADMIN_USERNAME", "")
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "")
 ADMIN_SESSION_TTL_SECONDS = 300
 ADMIN_COOKIE_SECURE = os.getenv("ADMIN_COOKIE_SECURE", "false").lower() == "true"
+CORS_ALLOWED_ORIGINS = tuple(
+    origin.strip()
+    for origin in os.getenv(
+        "CORS_ALLOWED_ORIGINS",
+        "http://localhost:5008,http://127.0.0.1:5008",
+    ).split(",")
+    if origin.strip()
+)
 
 # ============================================================================
 # Knowledge Base (KB) Configuration
@@ -90,6 +98,19 @@ TIME_QUERY_PATTERN = re.compile(
 CHAT_TIMEZONE = os.getenv("CHAT_TIMEZONE", "Asia/Kolkata")
 TIME_DISPLAY_FORMAT = "%A, %d %B %Y at %I:%M:%S %p"
 
+# Verified school contacts used for relevant next steps.
+ADMISSION_PHONE = "8147883880"
+ADMISSION_EMAIL = "admission@baldwinboyshighschool.edu.in"
+FEE_ENQUIRY_PHONE = "8147883880"
+GENERAL_ENQUIRY_PHONE = "8147883880"
+GENERAL_ENQUIRY_EMAIL = "enquiry@baldwinboyshighschool.edu.in"
+ONLINE_APPLICATION_URL = "https://portal.baldwinboyshighschool.edu.in/#/auth/login"
+
+# Conversational Agent and Lead Configuration
+ENABLE_CONVERSATIONAL_AGENT = os.getenv("ENABLE_CONVERSATIONAL_AGENT", "true").lower() == "true"
+LEADS_FILE = BASE_DIR / "data/leads.json"
+INDIAN_PHONE_PATTERN = re.compile(r"^(?:\+91|91|0)?[6-9]\d{9}$")
+
 # ============================================================================
 # Prompt Hints
 # ============================================================================
@@ -129,8 +150,8 @@ LLM_TEMPERATURE_CHAT = 0.7
 # PDF Configuration
 # ============================================================================
 
-# Directory containing the persisted source PDF used for the active rebuild.
-# Uploads are stored here using their content hash as the safe filename.
+# Directory containing the source PDF/DOCX files used for a knowledge-base build.
+# Admin uploads are stored separately in data/kb using safe content-hash names.
 PDF_PATH = BASE_DIR / "KB_PDF"
 PDF_CHUNK_SIZE = 500
 PDF_CHUNK_OVERLAP = 80

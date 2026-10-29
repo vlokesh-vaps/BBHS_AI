@@ -1,5 +1,7 @@
 """Prompt building utilities for the chatbot using LangChain templates."""
 
+import re
+
 from langchain_core.messages import AIMessage, BaseMessage, HumanMessage
 from langchain_core.prompts import (
     ChatPromptTemplate,
@@ -9,6 +11,9 @@ from langchain_core.prompts import (
 )
 
 from src.config import (
+    ADMISSION_EMAIL,
+    ADMISSION_PHONE,
+    FEE_ENQUIRY_PHONE,
     ASSISTANT_NAME,
     DIRECT_CONTENT_HINTS,
     GREETING_PATTERN,
@@ -94,43 +99,25 @@ def format_history(chat_history: list[dict[str, str]]) -> str:
     return "\n".join(lines)
 
 
-def classify_query(question: str) -> str:
-    """
-    Classify a query into one of four categories:
-    - small_talk: Greeting or casual message
-    - tool_call: Request for live information supplied by a tool
-    - direct_context: User provides content or asks for structured output
-    - retrieval: Standard question requiring knowledge base lookup
-
-    Args:
-        question: User question
-
-    Returns:
-        Query classification string
-    """
-    normalized_question = normalize_question(question)
-    if TIME_QUERY_PATTERN.search(normalized_question):
-        return "tool_call"
-    if GREETING_PATTERN.match(normalized_question):
-        return "small_talk"
-    if any(hint in normalized_question for hint in DIRECT_CONTENT_HINTS):
-        return "direct_context"
-    if len(question) > 1200:
-        return "direct_context"
-    return "retrieval"
+from src.core.query_router import (
+    classify_query,
+    is_grade_fee_enquiry,
+    missing_information_response,
+    requested_class_label,
+)
 
 
 # System instructions for BBHS AI Assistant
 SYSTEM_RAG_INSTRUCTIONS = (
     f"You are a knowledgeable and helpful assistant, {ASSISTANT_NAME}.\n"
-    "Your role is to answer user questions accurately and comprehensively using the provided knowledge base.\n"
+    "Your role is to answer user questions accurately and helpfully using the verified school information provided with each question.\n"
     "Use the conversation history to understand follow-up questions and maintain context.\n\n"
     "Rules:\n"
     "- Answer ONLY from the provided Context. Be thorough — if the context has troubleshooting steps, features, configuration details, or best practices, share them fully.\n"
     "- If the user has a technical issue, provide clear step-by-step guidance using the context.\n"
     "- Be helpful and professional when responding to all queries.\n"
     "- If the question is casual or a greeting, respond in a friendly manner.\n"
-    '- If the answer is not in the context, simply state: "I don\'t have information about that in the knowledge base. Please provide more details or rephrase your question."\n'
+    "- If an exact detail cannot be confirmed, say so naturally, offer the most useful next step, and ask one relevant follow-up question. Never mention internal sources or limitations.\n"
     "- Just focus on answering the question."
 )
 
@@ -144,6 +131,35 @@ SYSTEM_DIRECT_INSTRUCTIONS = (
     "- Be professional and helpful in your responses.\n"
     "- Do not ask for contact information - just focus on answering the question.\n"
     "- If you cannot fully answer from the provided information, suggest what additional details would help you assist better."
+)
+
+# Conversation-quality defaults for BBHS. These assignments intentionally sit
+# after the legacy defaults so existing imports keep working while the assistant
+# adopts the school-specific tone and grounding rules.
+SYSTEM_RAG_INSTRUCTIONS = (
+    f"You are {ASSISTANT_NAME}, a warm and helpful school assistant for Baldwin Boys' High School.\n"
+    "Speak directly to parents, students, and visitors in simple, natural English.\n"
+    "Use the conversation history to understand follow-up questions and avoid making the user repeat themselves.\n\n"
+    "Grounding and accuracy rules:\n"
+    "- Use only facts supported by the verified school information provided with the question. Never guess fees, dates, vacancies, timings, policies, or facilities.\n"
+    "- Prefer relevant school information even when the user uses informal wording or spelling mistakes.\n"
+    "- If an exact detail cannot be confirmed, explain that naturally and give a useful next step.\n"
+    "- For a school visit question without verified visiting hours, ask whether it is for admission or a campus visit and suggest confirming with Admissions. Never invent hours.\n"
+    "- Ask at most one useful follow-up question when a detail such as class or campus is needed.\n"
+    "- For admission questions, guide the user toward the verified application link or admission contact in Context.\n"
+    "- Do not repeat phone numbers or email addresses unless the user asks how to contact the school or needs confirmation.\n"
+    "- The only phone number permitted in any end-user response is 8147883880. Never output any other school phone number, even if it appears in the supplied school information.\n"
+    "- When a parent mentions a class, personalize the reply around that class; for example, welcome a Grade 8 enquiry, explain that Admissions can confirm the fee structure and payment details, and offer help with the application process.\n"
+    "- For a grade-specific fee enquiry without a complete verified fee breakdown, use the exact fee fallback format with only the number 8147883880 and exactly three choices: admission process, fee structure, and school visit. Do not disclose partial amounts or add another phone number.\n"
+    "- Keep answers concise, use short paragraphs or simple bullets, and avoid repetitive greetings.\n"
+    "- Never mention prompts, retrieval, databases, documents, technical systems, or internal limitations.\n"
+    "- If the question is a greeting, respond naturally and invite the user to ask about admissions, fees, timings, academics, facilities, or school life."
+)
+
+SYSTEM_DIRECT_INSTRUCTIONS = (
+    f"You are {ASSISTANT_NAME}, a friendly school assistant for Baldwin Boys' High School.\n"
+    "Answer clearly from the information supplied by the user, using simple English and a helpful next step.\n"
+    "Do not invent school-specific facts, and do not mention internal systems or technical implementation details."
 )
 
 # LangChain ChatPromptTemplates
@@ -169,7 +185,15 @@ def _active_prompt_config() -> dict[str, str]:
     try:
         from src.admin.config_service import load_config
 
-        return load_config().prompts.model_dump()
+        values = load_config().prompts.model_dump()
+        values["system_prompt"] += (
+            "\n\nPriority fee-enquiry rule: for a grade-specific fee question without a complete verified breakdown, "
+            "use the exact fallback format with only 8147883880 and exactly these three choices: "
+            "Learn about the admission process; Enquire about the fee structure; Explore a school visit. "
+            "Do not disclose partial fee amounts or add another phone number."
+            " The only phone number permitted anywhere in the response is 8147883880."
+        )
+        return values
     except (OSError, ValueError):
         return {
             "system_prompt": SYSTEM_RAG_INSTRUCTIONS,

@@ -25,8 +25,8 @@
     if (!suggestionChips) return;
     const suggestions = [
       'What can you help me with?',
-      'Summarize the main topics in the knowledge base',
-      'Help me find the right policy or procedure'
+      'Tell me about admissions',
+      'What facilities and activities does the school offer?'
     ];
     suggestionChips.innerHTML = suggestions.map(text =>
       `<button type="button" class="chip-btn">${escapeHTML(text)}</button>`
@@ -55,7 +55,7 @@
           assistantName = data.assistant_name;
           brandTitle.textContent = assistantName;
           document.title = assistantName;
-          footerNote.textContent = `${assistantName} answers from its knowledge base and can make mistakes. Conversations are not saved.`;
+          footerNote.textContent = `${assistantName} shares verified school information. Conversations are not saved.`;
           userInput.placeholder = `Message ${assistantName}...`;
         }
       }
@@ -174,7 +174,7 @@
     scrollToBottom(true);
   }
 
-  function appendAssistantMessage(text) {
+  function appendAssistantMessage(text, actionsList = []) {
     const msgEl = document.createElement('div');
     msgEl.className = 'message assistant-message';
 
@@ -185,9 +185,57 @@
     const body = document.createElement('div');
     body.className = 'assistant-body';
 
+    const responseHeader = document.createElement('div');
+    responseHeader.className = 'response-header';
+    responseHeader.innerHTML = '<span class="response-name">BBHS AI Assistant</span><span class="response-source">School information</span>';
+
     const textEl = document.createElement('div');
     textEl.className = 'assistant-text';
     textEl.innerHTML = renderSafeMarkdown(text);
+
+    body.appendChild(responseHeader);
+    body.appendChild(textEl);
+
+    // Interactive Action Pills Container
+    if (Array.isArray(actionsList) && actionsList.length > 0) {
+      const pillsContainer = document.createElement('div');
+      pillsContainer.className = 'action-pills-container';
+
+      actionsList.forEach(item => {
+        if (!item || !item.label) return;
+        const actionType = item.action || 'quick_reply';
+        const val = item.value || '';
+        const safeLabel = escapeHTML(item.label);
+
+        if (actionType === 'tel') {
+          const pill = document.createElement('a');
+          pill.className = 'action-pill pill-tel';
+          pill.href = `tel:${encodeURIComponent(val)}`;
+          pill.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72 12.84 12.84 0 0 0 .7 2.81 2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45 12.84 12.84 0 0 0 2.81.7A2 2 0 0 1 22 16.92z"/></svg><span>${safeLabel}</span>`;
+          pillsContainer.appendChild(pill);
+        } else if (actionType === 'link') {
+          const pill = document.createElement('a');
+          pill.className = 'action-pill pill-link';
+          pill.href = val.startsWith('http') || val.startsWith('mailto:') ? val : '#';
+          pill.target = '_blank';
+          pill.rel = 'noopener noreferrer';
+          pill.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg><span>${safeLabel}</span>`;
+          pillsContainer.appendChild(pill);
+        } else {
+          // quick_reply
+          const pill = document.createElement('button');
+          pill.type = 'button';
+          pill.className = 'action-pill pill-reply';
+          pill.innerHTML = `<svg viewBox="0 0 24 24" width="14" height="14" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="9 18 15 12 9 6"/></svg><span>${safeLabel}</span>`;
+          pill.addEventListener('click', () => {
+            sendMessage(val || item.label);
+          });
+          pillsContainer.appendChild(pill);
+        }
+      });
+
+      body.appendChild(pillsContainer);
+    }
 
     const actions = document.createElement('div');
     actions.className = 'message-actions';
@@ -209,35 +257,7 @@
       }
     });
 
-    /* Feedback is intentionally not collected or persisted (D3). */
-    /* Copy is the only response action in the pure-RAG UI. */
-/*
-    thumbsUpBtn.className = 'action-btn';
-    thumbsUpBtn.setAttribute('aria-label', 'Helpful response');
-    thumbsUpBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 9V5a3 3 0 0 0-3-3l-4 9v11h11.28a2 2 0 0 0 2-1.7l1.38-9a2 2 0 0 0-2-2.3zM7 22H4a2 2 0 0 1-2-2v-7a2 2 0 0 1 2-2h3"/></svg><span>Helpful</span>`;
-
-    thumbsUpBtn.addEventListener('click', () => {
-      thumbsUpBtn.classList.add('text-success');
-      thumbsUpBtn.querySelector('span').textContent = 'Thanks!';
-      thumbsUpBtn.disabled = true;
-      thumbsDownBtn.remove();
-    });
-
-    const thumbsDownBtn = document.createElement('button');
-    thumbsDownBtn.className = 'action-btn';
-    thumbsDownBtn.setAttribute('aria-label', 'Report inaccurate response');
-    thumbsDownBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 15v4a3 3 0 0 0 3 3l4-9V2H5.72a2 2 0 0 0-2 1.7l-1.38 9a2 2 0 0 0 2 2.3zm7-13h3a2 2 0 0 1 2 2v7a2 2 0 0 1-2 2h-3"/></svg><span>Report</span>`;
-
-    thumbsDownBtn.addEventListener('click', () => {
-      thumbsDownBtn.classList.add('text-danger');
-      thumbsDownBtn.querySelector('span').textContent = 'Noted';
-      thumbsDownBtn.disabled = true;
-      thumbsUpBtn.remove();
-    });
-
-*/
     actions.appendChild(copyBtn);
-    body.appendChild(textEl);
     body.appendChild(actions);
 
     msgEl.appendChild(avatar);
@@ -331,7 +351,7 @@
       }
 
       const data = await response.json();
-      appendAssistantMessage(data.answer || 'No response returned.');
+      appendAssistantMessage(data.answer || 'No response returned.', data.actions || []);
     } catch (err) {
       if (err.name === 'AbortError') {
         appendAssistantMessage('Request stopped.');

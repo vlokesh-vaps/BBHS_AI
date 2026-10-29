@@ -74,7 +74,7 @@ class GuardrailConfig(BaseModel):
     hallucination_protection: bool = True
     minimum_retrieval_score: float = Field(default=0.0, ge=0.0, le=1.0)
     out_of_scope_response: str = Field(
-        default="I don't have information about that in the knowledge base. Please provide more details or rephrase your question.",
+        default="I'd love to help with that. Could you tell me a little more? For example, are you asking about admissions, fees, school timings, facilities, or school life?",
         min_length=1,
         max_length=4000,
     )
