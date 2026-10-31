@@ -19,10 +19,7 @@ from src.config import (    ADMIN_CONFIG_FILE,    ASSISTANT_NAME,    BM25_TOP_K,
 
 def _default_prompt_values() -> dict[str, str]:
     """Read the existing prompt source as the default admin configuration."""
-    from src.core.prompts import (
-        SYSTEM_DIRECT_INSTRUCTIONS,
-        SYSTEM_RAG_INSTRUCTIONS,
-    )
+    from src.core.prompts import (        SYSTEM_DIRECT_INSTRUCTIONS,        SYSTEM_RAG_INSTRUCTIONS,    )
 
     return {
         "system_prompt": SYSTEM_RAG_INSTRUCTIONS,
@@ -37,8 +34,7 @@ def default_config() -> AdminConfig:
     """Return the validated configuration derived from existing constants."""
     prompts = _default_prompt_values()
     return AdminConfig(
-        models={
-            "primary_provider": "groq",
+        models={"primary_provider": "groq",
             "primary_model": CHAT_MODEL,
             "fallback_provider": "",
             "fallback_model": "",

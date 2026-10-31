@@ -210,6 +210,7 @@ async function loadApprovals() {
         <td><small class="text-muted">${new Date(doc.updated_at).toLocaleDateString()}</small></td>
         <td class="text-end">
           <div class="btn-group btn-group-sm">
+            <button class="btn btn-outline-secondary doc-preview-btn" data-id="${doc.id}" title="Preview content"><i class="bi bi-eye"></i> Preview</button>
             <button class="btn btn-success doc-action-btn" data-id="${doc.id}" data-action="publish" title="Approve & Publish to Assistant"><i class="bi bi-check-circle"></i> Approve & Publish</button>
             <button class="btn btn-outline-info doc-action-btn" data-id="${doc.id}" data-action="approve" title="Approve without publishing"><i class="bi bi-check"></i> Approve</button>
             <button class="btn btn-outline-danger doc-reject-btn" data-id="${doc.id}" title="Request changes"><i class="bi bi-x-circle"></i> Reject</button>
@@ -247,6 +248,31 @@ function setupActionHandlers() {
         showAlert(err.message, 'danger');
       } finally {
         actionBtn.disabled = false;
+      }
+    }
+
+    const previewBtn = event.target.closest('.doc-preview-btn');
+    if (previewBtn) {
+      const modal = new bootstrap.Modal(document.getElementById('previewModal'));
+      const content = document.getElementById('preview-content');
+      const error = document.getElementById('preview-error');
+      const loading = document.getElementById('preview-loading');
+      const meta = document.getElementById('preview-meta');
+      content.textContent = '';
+      error.classList.add('d-none');
+      loading.classList.remove('d-none');
+      modal.show();
+      try {
+        const preview = await api(`/admin/kb/documents/${previewBtn.dataset.id}/preview`);
+        document.getElementById('previewModalLabel').innerHTML = `<i class="bi bi-eye me-1"></i> ${escapeHtml(preview.title)}`;
+        meta.textContent = `${preview.content_type.toUpperCase()} · ${preview.category} · ${preview.school_campus} · Version ${preview.version}`;
+        content.textContent = preview.content || 'No content is available for preview.';
+        if (preview.truncated) content.textContent += '\n\n[Preview truncated for display]';
+      } catch (err) {
+        error.textContent = err.message;
+        error.classList.remove('d-none');
+      } finally {
+        loading.classList.add('d-none');
       }
     }
 
@@ -655,6 +681,14 @@ async function loadAll() {
     const primary = providers.find(p => p.id === state.config.models.primary_provider);
     modelSelect.innerHTML = (primary?.models || []).map(m => `<option>${escapeHtml(m)}</option>`).join('');
     modelSelect.value = state.config.models.primary_model;
+  }
+
+  const fallbackModelSelect = document.querySelector('[name="fallback_model"]');
+  if (fallbackModelSelect) {
+    const fallback = providers.find(p => p.id === state.config.models.fallback_provider);
+    fallbackModelSelect.innerHTML = '<option value="">None</option>' +
+      (fallback?.models || []).map(m => `<option value="${escapeHtml(m)}">${escapeHtml(m)}</option>`).join('');
+    fallbackModelSelect.value = state.config.models.fallback_model;
   }
 
   fillForms();

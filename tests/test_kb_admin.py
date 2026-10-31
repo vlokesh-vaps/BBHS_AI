@@ -244,6 +244,11 @@ def test_fastapi_admin_endpoints():
         doc_id = doc_data["id"]
         assert doc_data["status"] == "Review"
 
+        preview_resp = client.get(f"/admin/kb/documents/{doc_id}/preview", headers=auth_headers)
+        assert preview_resp.status_code == 200
+        assert preview_resp.json()["content"] == "Mid-term exams commence on October 10."
+        assert "data/" not in preview_resp.text
+
         # 2. Approve and publish document
         action_resp = client.post(
             f"/admin/kb/documents/{doc_id}/action",

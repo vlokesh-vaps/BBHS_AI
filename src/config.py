@@ -24,7 +24,7 @@ CORS_ALLOWED_ORIGINS = tuple(
     origin.strip()
     for origin in os.getenv(
         "CORS_ALLOWED_ORIGINS",
-        "http://localhost:5008,http://127.0.0.1:5008",
+        "http://localhost:8122,http://127.0.0.1:8122",
     ).split(",")
     if origin.strip()
 )
@@ -135,7 +135,7 @@ def normalize_question(question: str) -> str:
 # ============================================================================
 
 API_HOST = "0.0.0.0"
-API_PORT = 5008
+API_PORT = int(os.getenv("API_PORT", "8122"))
 API_TITLE = "BBHS AI Assistant API"
 
 # ============================================================================

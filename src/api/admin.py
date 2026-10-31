@@ -76,11 +76,9 @@ def require_admin_access(
     if existing_session:
         if _valid_session(existing_session):
             return
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Admin session expired; authenticate again",
-            headers={"WWW-Authenticate": "Basic"},
-        )
+        # Continue to the configured credential check so a browser carrying
+        # an expired cookie can transparently establish a fresh session.
+        # Invalid cookies without valid credentials still receive 401 below.
 
     if ADMIN_USERNAME and ADMIN_PASSWORD:
         valid_user = secrets.compare_digest(credentials.username, ADMIN_USERNAME) if credentials else False

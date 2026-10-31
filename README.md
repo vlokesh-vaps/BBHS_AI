@@ -131,11 +131,11 @@ AIChat_BBHS/
 # Run the API server
 python app.py
 # Or with Uvicorn directly
-uvicorn src.api.app:app --host 0.0.0.0 --port 5008 --workers 1
+uvicorn src.api.app:app --host 0.0.0.0 --port 8122 --workers 1
 ```
 Visit:
-- Chat Interface: `http://localhost:5008/chat`
-- Control Center: `http://localhost:5008/admin`
+- Chat Interface: `http://localhost:8122/chat`
+- Control Center: `http://localhost:8122/admin`
 
 For a full knowledge-base rebuild, place `.pdf` and `.docx` files in `KB_PDF/` and run `python -m scripts.build_kb`. Configure production browser origins with the comma-separated `CORS_ALLOWED_ORIGINS` environment variable.
 

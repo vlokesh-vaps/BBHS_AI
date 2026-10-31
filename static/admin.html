@@ -493,6 +493,29 @@
 
 
   <!-- MODAL: REJECTION FEEDBACK -->
+  <div class="modal fade" id="previewModal" tabindex="-1" aria-labelledby="previewModalLabel" aria-hidden="true">
+    <div class="modal-dialog modal-xl modal-dialog-scrollable">
+      <div class="modal-content">
+        <div class="modal-header">
+          <div>
+            <h5 class="modal-title" id="previewModalLabel"><i class="bi bi-eye me-1"></i> Content Preview</h5>
+            <small class="text-muted" id="preview-meta"></small>
+          </div>
+          <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+        </div>
+        <div class="modal-body">
+          <div id="preview-loading" class="text-center text-muted py-4 d-none"><span class="spinner-border spinner-border-sm me-2"></span>Loading preview…</div>
+          <div id="preview-error" class="alert alert-warning d-none"></div>
+          <pre id="preview-content" class="bg-light border rounded p-3 mb-0" style="white-space: pre-wrap; min-height: 220px;"></pre>
+        </div>
+        <div class="modal-footer">
+          <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Close Preview</button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- MODAL: REJECTION FEEDBACK -->
   <div class="modal fade" id="rejectionModal" tabindex="-1" aria-hidden="true">
     <div class="modal-dialog">
       <div class="modal-content">

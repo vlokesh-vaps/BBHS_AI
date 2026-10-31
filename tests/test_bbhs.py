@@ -33,6 +33,7 @@ from src.config import (
     ADMIN_PASSWORD,
     ADMIN_USERNAME,
     ASSISTANT_NAME,
+    CORS_ALLOWED_ORIGINS,
     KB_DIR,
     KB_MANIFEST_FILE,
     KB_STAGING_DIR,
@@ -217,6 +218,30 @@ def test_kb_unauthenticated_and_expired(client):
     # Invalid/expired cookie gives 401
     res = client.get("/admin/kb/status", cookies={"admin_session": "12345.invalidsig"})
     assert res.status_code == 401
+
+
+def test_admin_ui_and_expired_cookie_can_reauthenticate():
+    """The admin page is protected, and valid credentials renew an expired session."""
+    creds = base64.b64encode(f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}".encode()).decode()
+    with TestClient(app) as fresh_client:
+        res = fresh_client.get(
+            "/admin",
+            cookies={"admin_session": "12345.invalidsig"},
+            headers={"Authorization": f"Basic {creds}"},
+        )
+        assert res.status_code == 200
+        assert "AI Control Center" in res.text
+        assert "admin_session=" in res.headers.get("set-cookie", "")
+
+
+def test_admin_cors_uses_configured_origins(client):
+    """Credentialed admin requests must not receive wildcard CORS headers."""
+    origin = CORS_ALLOWED_ORIGINS[0]
+    creds = base64.b64encode(f"{ADMIN_USERNAME}:{ADMIN_PASSWORD}".encode()).decode()
+    res = client.get("/admin/config", headers={"Origin": origin, "Authorization": f"Basic {creds}"})
+    assert res.status_code == 200
+    assert res.headers.get("access-control-allow-origin") == origin
+    assert res.headers.get("access-control-allow-credentials") == "true"
 
 
 def test_kb_status_no_server_paths(client, admin_auth_headers):

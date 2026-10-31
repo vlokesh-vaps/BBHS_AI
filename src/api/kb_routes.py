@@ -28,6 +28,7 @@ from src.admin.kb_service import (
     start_rebuild_job,
     validate_pdf_content,
 )
+from src.admin.parsers import parse_docx, parse_pdf
 from src.admin.schemas import (
     DocumentCreateRequest,
     DocumentRecord,
@@ -277,6 +278,45 @@ def get_kb_document(doc_id: str) -> DocumentRecord:
     if not record:
         raise HTTPException(status_code=404, detail="Document not found")
     return record
+
+
+@router.get("/documents/{doc_id}/preview")
+def preview_kb_document(doc_id: str) -> dict[str, Any]:
+    """Return safe, bounded document content for administrator review."""
+    record = get_document(doc_id)
+    if not record:
+        raise HTTPException(status_code=404, detail="Document not found")
+
+    content = (record.content_text or "").strip()
+    if record.content_type in ("pdf", "docx"):
+        if not record.file_name:
+            content = "Preview unavailable: no source file is attached."
+        else:
+            source_path = (KB_DIR / record.file_name).resolve()
+            kb_root = KB_DIR.resolve()
+            if kb_root not in source_path.parents:
+                raise HTTPException(status_code=400, detail="Invalid document source")
+            try:
+                pages = parse_pdf(source_path) if record.content_type == "pdf" else parse_docx(source_path)
+                content = "\n\n".join(page.page_content for page in pages).strip()
+            except (OSError, ValueError):
+                # Do not expose server-side source paths or parser internals.
+                content = "Preview unavailable: the source file could not be read."
+
+    return {
+        "id": record.id,
+        "title": record.title,
+        "content_type": record.content_type,
+        "category": record.category,
+        "school_campus": record.school_campus,
+        "academic_year": record.academic_year,
+        "owner": record.owner,
+        "version": record.version,
+        "status": record.status,
+        "source_url": record.source_url,
+        "content": content[:20000],
+        "truncated": len(content) > 20000,
+    }
 
 
 @router.put("/documents/{doc_id}", response_model=DocumentRecord)

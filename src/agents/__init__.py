@@ -1,5 +1,6 @@
 """Conversational Admissions Agent package."""
 
+from src.agents.graph import admissions_graph, build_agent_graph
 from src.agents.orchestrator import AgentOrchestrator
 from src.agents.state import (
     ActionItem,
@@ -12,6 +13,8 @@ from src.agents.state import (
 
 __all__ = [
     "AgentOrchestrator",
+    "admissions_graph",
+    "build_agent_graph",
     "ActionItem",
     "AgentDecision",
     "AgentIntent",
@@ -19,4 +22,3 @@ __all__ = [
     "EnquiryStage",
     "SessionState",
 ]
-

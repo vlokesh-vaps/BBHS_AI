@@ -316,7 +316,8 @@ def test_missing_contact_config_never_hallucinates_numbers():
 
 def test_fastapi_webhook_returns_actions_payload():
     from starlette.testclient import TestClient
-    with TestClient(app) as client:
+    with patch("src.api.app._get_resources", return_value=(None, None, MagicMock(), {}, None)):
+        client = TestClient(app)
         res = client.post(
             "/webhook/chat",
             json={"message": "What is the Grade 8 fee?", "session_id": "test-agent-sess"},

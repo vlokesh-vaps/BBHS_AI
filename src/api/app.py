@@ -8,9 +8,9 @@ from contextlib import asynccontextmanager
 from pathlib import Path
 
 from dotenv import load_dotenv
-from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, HTMLResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from langchain_groq import ChatGroq
 
@@ -19,7 +19,13 @@ load_dotenv()
 from src.admin.config_service import default_config, load_config
 from src.admin.kb_service import startup_recovery
 from src.agents import AgentOrchestrator, SessionState
-from src.api.admin import require_admin_access, router as admin_router
+from src.api.admin import (
+    _session_signature,
+    _session_secret,
+    _valid_session,
+    require_admin_access,
+    router as admin_router,
+)
 from src.api.kb_routes import router as kb_router
 from src.api.schemas import ChatRequest, ChatResponse
 from src.config import (
@@ -28,6 +34,9 @@ from src.config import (
     API_TITLE,
     ASSISTANT_NAME,
     CHAT_MODEL,
+    CORS_ALLOWED_ORIGINS,
+    ADMIN_COOKIE_SECURE,
+    ADMIN_SESSION_TTL_SECONDS,
     ENABLE_CONVERSATIONAL_AGENT,
     LLM_MAX_TOKENS,
     LLM_TEMPERATURE,
@@ -188,7 +197,7 @@ app.include_router(kb_router)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins="*",
+    allow_origins=list(CORS_ALLOWED_ORIGINS),
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -279,9 +288,24 @@ def chat_config() -> dict[str, str]:
 
 
 @app.get("/admin", include_in_schema=False, dependencies=[Depends(require_admin_access)])
-def admin_ui() -> FileResponse:
+def admin_ui(request: Request) -> HTMLResponse:
     """Serve the internal AI Control Center UI."""
-    return FileResponse(str(_STATIC_DIR / "admin.html"))
+    response = HTMLResponse((_STATIC_DIR / "admin.html").read_text(encoding="utf-8"))
+    # File/HTML responses replace FastAPI's dependency response object. Set
+    # the session cookie on the returned response when Basic Auth just renewed
+    # an expired or missing session.
+    session = request.cookies.get("admin_session")
+    if not _valid_session(session) and _session_secret():
+        issued_at = str(int(time.time()))
+        response.set_cookie(
+            "admin_session",
+            f"{issued_at}.{_session_signature(issued_at)}",
+            max_age=ADMIN_SESSION_TTL_SECONDS,
+            httponly=True,
+            secure=ADMIN_COOKIE_SECURE,
+            samesite="lax",
+        )
+    return response
 
 
 @app.post("/webhook/chat", response_model=ChatResponse)
